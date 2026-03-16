@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submission Reviews - Ramskon</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <div class="brand">
+                <div class="brand-badge">S</div>
+                <div>
+                    <h1>Submission Reviews</h1>
+                    <p>AI-reviewed learner submissions</p>
+                </div>
+            </div>
+
+            <div class="top-actions">
+                <a class="btn btn-outline" href="{{ url_for('admin.admin_dashboard') }}">Dashboard</a>
+                <a class="btn" href="{{ url_for('auth.logout') }}">Logout</a>
+            </div>
+        </div>
+
+        {% for row in submissions %}
+        <div class="review-card">
+            <p><strong>User:</strong> {{ row.full_name }}</p>
+            <p><strong>Email:</strong> {{ row.email }}</p>
+            <p><strong>Course:</strong> {{ row.course_name }}</p>
+            <p><strong>Day:</strong> {{ row.day_number }}</p>
+            <p><strong>Topic:</strong> {{ row.topic_title }}</p>
+            <p><strong>Completed At:</strong> {{ row.completed_at }}</p>
+            <p><strong>Submission Note:</strong> {{ row.submission_text }}</p>
+            <p><strong>Uploaded File:</strong> {{ row.submission_file }}</p>
+
+            {% if row.submission_file %}
+                {% if row.submission_file.endswith('.mp4') %}
+                    <div class="video-box">
+                        <video width="420" controls>
+                            <source src="{{ url_for('static', filename='uploads/submissions/' + row.submission_file) }}" type="video/mp4">
+                        </video>
+                    </div>
+                {% elif row.submission_file.endswith('.png') or row.submission_file.endswith('.jpg') or row.submission_file.endswith('.jpeg') %}
+                    <div class="image-box">
+                        <img class="preview-img" src="{{ url_for('static', filename='uploads/submissions/' + row.submission_file) }}" alt="submission image">
+                    </div>
+                {% else %}
+                    <p><a href="{{ url_for('static', filename='uploads/submissions/' + row.submission_file) }}" target="_blank">Open Uploaded File</a></p>
+                {% endif %}
+            {% endif %}
+
+            <div class="divider"></div>
+            <p><strong>AI Score:</strong> {{ row.ai_score }}/10</p>
+            <p><strong>AI Feedback:</strong></p>
+            <div class="codeish">{{ row.ai_feedback }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>

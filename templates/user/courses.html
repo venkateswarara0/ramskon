@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Courses - Ramskon</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container" style="width: 700px;">
+        <h1>Available Courses</h1>
+        <p>Welcome, {{ name }}</p>
+
+        <h3>All Courses</h3>
+
+        {% for course in courses %}
+        <div style="border:1px solid #ddd; padding:15px; margin:10px 0; border-radius:10px; text-align:left;">
+            <h3>{{ course.course_name }}</h3>
+            <p>{{ course.description }}</p>
+            <p><strong>Duration:</strong> {{ course.duration_days }} days</p>
+
+            <form method="POST">
+                <input type="hidden" name="course_id" value="{{ course.id }}">
+                <button type="submit">Request This Course</button>
+            </form>
+        </div>
+        {% endfor %}
+
+        <h3>My Requests</h3>
+
+        {% if my_requests %}
+            {% for req in my_requests %}
+            <div style="border:1px solid #ccc; padding:10px; margin:10px 0; border-radius:8px; text-align:left;">
+                <p><strong>Course:</strong> {{ req.course_name }}</p>
+                <p><strong>Status:</strong> {{ req.status }}</p>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p>No requests yet.</p>
+        {% endif %}
+
+        <a href="{{ url_for('user.user_dashboard') }}">Back to Dashboard</a><br>
+        <a href="{{ url_for('auth.logout') }}">Logout</a>
+    </div>
+</body>
+</html>

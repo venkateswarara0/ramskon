@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Topic - Ramskon</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <div class="brand">
+                <div class="brand-badge">D</div>
+                <div>
+                    <h1>{{ topic.course_name }}</h1>
+                    <p>Day {{ day_number }} learning module</p>
+                </div>
+            </div>
+
+            <div class="top-actions">
+                <a class="btn btn-outline" href="{{ url_for('user.course_roadmap', course_id=course_id) }}">Back to Roadmap</a>
+                <a class="btn" href="{{ url_for('auth.logout') }}">Logout</a>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>{{ topic.topic_title }}</h3>
+            <p><strong>Topic Description:</strong> {{ topic.topic_description }}</p>
+            <div class="divider"></div>
+            <h3>Assignment</h3>
+            <p><strong>{{ topic.assignment_title }}</strong></p>
+            <p>{{ topic.assignment_description }}</p>
+
+            <div class="actions-row">
+                {% if is_completed %}
+                    <span class="status completed">Completed</span>
+                {% else %}
+                    <span class="status pending">Pending</span>
+                {% endif %}
+            </div>
+
+            {% if submission_text %}
+            <div class="divider"></div>
+            <p><strong>Your Note:</strong></p>
+            <p>{{ submission_text }}</p>
+            {% endif %}
+
+            {% if submission_file %}
+            <p><strong>Uploaded File:</strong> {{ submission_file }}</p>
+
+            {% if submission_file.endswith('.mp4') %}
+            <div class="video-box">
+                <video width="420" controls>
+                    <source src="{{ url_for('static', filename='uploads/submissions/' + submission_file) }}" type="video/mp4">
+                </video>
+            </div>
+            {% elif submission_file.endswith('.png') or submission_file.endswith('.jpg') or submission_file.endswith('.jpeg') %}
+            <div class="image-box">
+                <img class="preview-img" src="{{ url_for('static', filename='uploads/submissions/' + submission_file) }}" alt="submission image">
+            </div>
+            {% else %}
+            <p><a href="{{ url_for('static', filename='uploads/submissions/' + submission_file) }}" target="_blank">Open Uploaded File</a></p>
+            {% endif %}
+            {% endif %}
+
+            {% if ai_score is not none %}
+            <div class="divider"></div>
+            <p><strong>AI Score:</strong> {{ ai_score }}/10</p>
+            <p><strong>AI Feedback:</strong></p>
+            <div class="codeish">{{ ai_feedback }}</div>
+            {% endif %}
+        </div>
+
+        <div class="card" style="margin-top:20px; background:#fffdf9;">
+            <h3>AI Topic Explainer</h3>
+            <p><strong>Simple Explanation:</strong></p>
+            <p>{{ topic_ai.simple_explanation }}</p>
+
+            <p><strong>Why It Matters:</strong></p>
+            <p>{{ topic_ai.why_it_matters }}</p>
+
+            <p><strong>Beginner Tips:</strong></p>
+            <ul class="list-clean">
+                {% for tip in topic_ai.beginner_tips %}
+                <li>{{ tip }}</li>
+                {% endfor %}
+            </ul>
+
+            <p><strong>Practice Steps:</strong></p>
+            <ol class="list-clean">
+                {% for step in topic_ai.practice_steps %}
+                <li>{{ step }}</li>
+                {% endfor %}
+            </ol>
+
+            <p><strong>Suggested Telugu Resources:</strong></p>
+            {% if youtube_videos %}
+                <div class="grid-2">
+                    {% for video in youtube_videos %}
+                    <div class="resource-item">
+                        <img src="{{ video.thumbnail }}" alt="thumbnail" style="width:100%; border-radius:12px;">
+                        <p><strong>{{ video.title }}</strong></p>
+                        <p class="muted">Channel: {{ video.channel }}</p>
+                        <a href="{{ video.youtube_link }}" target="_blank">Watch on YouTube</a>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p>No specific resources available right now.</p>
+            {% endif %}
+
+            <p style="margin-top:16px;"><strong>Mini Practice Task:</strong></p>
+            <p>{{ topic_ai.mini_practice_task }}</p>
+        </div>
+
+        {% if not is_completed %}
+        <div class="form-card" style="margin-top:20px;">
+            <form method="POST" enctype="multipart/form-data">
+                <label><strong>Submission Note</strong></label>
+                <textarea name="submission_text" placeholder="Write a short note about what you completed..."></textarea>
+
+                <label><strong>Upload Proof File</strong></label>
+                <input type="file" name="submission_file" required>
+
+                <button type="submit">Submit and Mark as Completed</button>
+            </form>
+        </div>
+        {% else %}
+        <div class="card center" style="margin-top:20px;">
+            <p style="color: var(--success); font-weight: 700;">You already completed this topic.</p>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

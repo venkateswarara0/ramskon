@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Dashboard - Ramskon</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <div class="brand">
+                <div class="brand-badge">R</div>
+                <div>
+                    <h1>User Dashboard</h1>
+                    <p>Welcome, {{ name }}</p>
+                </div>
+            </div>
+
+            <div class="top-actions">
+                <a class="btn btn-outline" href="{{ url_for('user.user_courses') }}">Request Courses</a>
+                <a class="btn btn-outline" href="{{ url_for('user.approved_courses') }}">Approved Courses</a>
+                <a class="btn" href="{{ url_for('auth.logout') }}">Logout</a>
+            </div>
+        </div>
+
+        <div class="grid-4">
+            <div class="stat-card">
+                <h3>Approved Courses</h3>
+                <div class="stat-value">{{ approved_count }}</div>
+            </div>
+            <div class="stat-card">
+                <h3>Completed Topics</h3>
+                <div class="stat-value">{{ completed_count }}</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Topics</h3>
+                <div class="stat-value">{{ total_topics }}</div>
+            </div>
+            <div class="stat-card">
+                <h3>Progress</h3>
+                <div class="stat-value">{{ progress_percent }}%</div>
+            </div>
+            <div class="stat-card">
+                <h3>Current Streak</h3>
+                <div class="stat-value">{{ current_streak }} 🔥</div>
+            </div>
+            <div class="stat-card">
+                <h3>Best Streak</h3>
+                <div class="stat-value">{{ best_streak }}</div>
+            </div>
+            <div class="stat-card">
+                <h3>Discipline Score</h3>
+                <div class="stat-value">{{ discipline_score }}</div>
+            </div>
+            <div class="stat-card">
+                <h3>Missed Days</h3>
+                <div class="stat-value">{{ missed_days }}</div>
+            </div>
+        </div>
+
+        <div class="section-title">Overall Progress</div>
+        <div class="progress-shell">
+            <div class="progress-bar" style="width: {{ progress_percent }}%;"></div>
+        </div>
+
+        <div class="actions-row" style="margin-top: 22px;">
+            <a class="btn" href="{{ url_for('user.user_courses') }}">Request New Courses</a>
+            <a class="btn btn-outline" href="{{ url_for('user.approved_courses') }}">Open My Courses</a>
+            <a class="btn btn-outline" href="{{ url_for('user.progress') }}">View Progress</a>
+        </div>
+    </div>
+</body>
+</html>

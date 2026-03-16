@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Roadmap - Ramskon</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <div class="brand">
+                <div class="brand-badge">R</div>
+                <div>
+                    <h1>{{ course_name }}</h1>
+                    <p>{{ completed_days }} / {{ total_days }} days completed</p>
+                </div>
+            </div>
+
+            <div class="top-actions">
+                <a class="btn btn-outline" href="{{ url_for('user.approved_courses') }}">Back</a>
+                <a class="btn" href="{{ url_for('auth.logout') }}">Logout</a>
+            </div>
+        </div>
+
+        <div class="progress-shell">
+            <div class="progress-bar" style="width: {{ progress_percent }}%;"></div>
+        </div>
+
+        <p class="muted" style="margin-top:10px;">
+            Progress: {{ progress_percent }}% | Next unlocked day: {{ next_unlocked_day }}
+        </p>
+
+        {% if topics %}
+        <div class="grid-3" style="margin-top:20px;">
+            {% for topic in topics %}
+            <div class="roadmap-card">
+                <h3>Day {{ topic.day_number }}</h3>
+                <p>{{ topic.topic_title }}</p>
+
+                {% if topic.is_completed %}
+                    <span class="status completed">Completed</span>
+                    <div class="actions-row">
+                        <a class="btn btn-outline" href="{{ url_for('user.daily_topic', course_id=course_id, day_number=topic.day_number) }}">Open</a>
+                    </div>
+                {% elif topic.day_number == next_unlocked_day %}
+                    <span class="status pending">Unlocked</span>
+                    <div class="actions-row">
+                        <a class="btn" href="{{ url_for('user.daily_topic', course_id=course_id, day_number=topic.day_number) }}">Start</a>
+                    </div>
+                {% else %}
+                    <span class="status locked">Locked</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="card" style="margin-top:20px;">
+            <p>No roadmap topics found for this course yet.</p>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

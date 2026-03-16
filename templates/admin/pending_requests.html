@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pending Requests - Ramskon</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <div class="brand">
+                <div class="brand-badge">P</div>
+                <div>
+                    <h1>Pending Course Requests</h1>
+                    <p>Approve or reject learner access</p>
+                </div>
+            </div>
+
+            <div class="top-actions">
+                <a class="btn btn-outline" href="{{ url_for('admin.admin_dashboard') }}">Dashboard</a>
+                <a class="btn" href="{{ url_for('auth.logout') }}">Logout</a>
+            </div>
+        </div>
+
+        {% for req in requests_data %}
+        <div class="review-card">
+            <p><strong>User:</strong> {{ req.full_name }}</p>
+            <p><strong>Email:</strong> {{ req.email }}</p>
+            <p><strong>Course:</strong> {{ req.course_name }}</p>
+            <p><strong>Requested At:</strong> {{ req.requested_at }}</p>
+
+            <form method="POST" class="actions-row">
+                <input type="hidden" name="request_id" value="{{ req.id }}">
+                <button type="submit" name="action" value="approve" class="btn-success">Approve</button>
+                <button type="submit" name="action" value="reject" class="btn-danger">Reject</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>

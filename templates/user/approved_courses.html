@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Approved Courses - Ramskon</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <div class="brand">
+                <div class="brand-badge">C</div>
+                <div>
+                    <h1>My Approved Courses</h1>
+                    <p>Welcome, {{ name }}</p>
+                </div>
+            </div>
+
+            <div class="top-actions">
+                <a class="btn btn-outline" href="{{ url_for('user.user_dashboard') }}">Dashboard</a>
+                <a class="btn" href="{{ url_for('auth.logout') }}">Logout</a>
+            </div>
+        </div>
+
+        {% if approved_courses %}
+        <div class="grid-2">
+            {% for course in approved_courses %}
+            <div class="course-card">
+                <h3>{{ course.course_name }}</h3>
+                <p class="muted">{{ course.description }}</p>
+
+                <div class="kv">
+                    <p><strong>Duration:</strong> {{ course.duration_days }} days</p>
+                </div>
+
+                {% if course.is_completed %}
+                    <div class="actions-row">
+                        <span class="status completed">Course Completed</span>
+                    </div>
+
+                    <div class="divider"></div>
+
+                    <p><strong>Badge:</strong> {{ course.badge_name }}</p>
+                    <p><strong>Completed At:</strong> {{ course.completed_at }}</p>
+
+                    <div class="actions-row">
+                        <a class="btn" href="{{ url_for('user.certificate', course_id=course.id) }}">View Certificate</a>
+                    </div>
+                {% else %}
+                    <div class="actions-row">
+                        <span class="status pending">In Progress</span>
+                    </div>
+
+                    <div class="actions-row">
+                        <a class="btn" href="{{ url_for('user.course_roadmap', course_id=course.id) }}">Open Roadmap</a>
+                    </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+            <div class="card">
+                <p>No approved courses yet.</p>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>

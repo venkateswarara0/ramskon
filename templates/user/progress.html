@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Progress - Ramskon</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container" style="width: 900px;">
+        <h1>My Progress</h1>
+        <p>Welcome, {{ name }}</p>
+
+        {% if progress_data %}
+            {% for row in progress_data %}
+            <div style="border:1px solid #ddd; padding:15px; margin:10px 0; border-radius:10px; text-align:left;">
+                <p><strong>Course:</strong> {{ row.course_name }}</p>
+                <p><strong>Day:</strong> {{ row.day_number }}</p>
+                <p><strong>Topic:</strong> {{ row.topic_title }}</p>
+                <p><strong>Status:</strong> {% if row.is_completed %}Completed{% else %}Pending{% endif %}</p>
+                <p><strong>Completed At:</strong> {{ row.completed_at }}</p>
+                <p><strong>Submission Note:</strong> {{ row.submission_text }}</p>
+                <p><strong>Uploaded File:</strong> {{ row.submission_file }}</p>
+                <p><strong>AI Score:</strong> {{ row.ai_score }}/10</p>
+                <p><strong>AI Feedback:</strong></p>
+                <pre style="white-space: pre-wrap; font-family: Arial, sans-serif;">{{ row.ai_feedback }}</pre>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p>No progress yet.</p>
+        {% endif %}
+
+        <a href="{{ url_for('user.user_dashboard') }}">Back to Dashboard</a><br>
+        <a href="{{ url_for('auth.logout') }}">Logout</a>
+    </div>
+</body>
+</html>
