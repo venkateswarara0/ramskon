@@ -28,7 +28,7 @@ def register():
 
         cursor.execute("""
             INSERT INTO users (full_name, email, password_hash, role, is_approved)
-            VALUES (%s, %s, %s, 'user', 0)
+            VALUES (%s, %s, %s, 'user', FALSE)
         """, (full_name, email, password_hash))
 
         conn.commit()
@@ -53,7 +53,6 @@ def login():
             FROM users
             WHERE email = %s
         """, (email,))
-
         user = cursor.fetchone()
         conn.close()
 
