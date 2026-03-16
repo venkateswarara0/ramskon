@@ -14,13 +14,12 @@ def register():
         full_name = request.form["full_name"]
         email = request.form["email"]
         password = request.form["password"]
-
         password_hash = generate_password_hash(password)
 
         conn = get_connection()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT id FROM users WHERE email = ?", (email,))
+        cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
         existing_user = cursor.fetchone()
 
         if existing_user:
@@ -29,12 +28,11 @@ def register():
 
         cursor.execute("""
             INSERT INTO users (full_name, email, password_hash, role, is_approved)
-            VALUES (?, ?, ?, 'user', 0)
+            VALUES (%s, %s, %s, 'user', 0)
         """, (full_name, email, password_hash))
 
         conn.commit()
         conn.close()
-
         return redirect(url_for("auth.login"))
 
     return render_template("register.html")
@@ -53,24 +51,25 @@ def login():
         cursor.execute("""
             SELECT id, full_name, email, password_hash, role, is_approved
             FROM users
-            WHERE email = ?
+            WHERE email = %s
         """, (email,))
+
         user = cursor.fetchone()
         conn.close()
 
         if not user:
             return "User not found."
 
-        if not check_password_hash(user.password_hash, password):
+        if not check_password_hash(user[3], password):
             return "Wrong password."
 
-        session["user_id"] = user.id
-        session["full_name"] = user.full_name
-        session["email"] = user.email
-        session["role"] = user.role
-        session["is_approved"] = bool(user.is_approved)
+        session["user_id"] = user[0]
+        session["full_name"] = user[1]
+        session["email"] = user[2]
+        session["role"] = user[4]
+        session["is_approved"] = bool(user[5])
 
-        if user.role == "admin":
+        if user[4] == "admin":
             return redirect(url_for("admin.admin_dashboard"))
         else:
             return redirect(url_for("user.user_dashboard"))

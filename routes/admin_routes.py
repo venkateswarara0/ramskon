@@ -7,7 +7,6 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 def admin_dashboard():
     if "user_id" not in session:
         return redirect(url_for("auth.login"))
-
     if session.get("role") != "admin":
         return redirect(url_for("user.user_dashboard"))
 
@@ -23,7 +22,7 @@ def admin_dashboard():
     cursor.execute("SELECT COUNT(*) FROM course_requests WHERE status = 'approved'")
     approved_requests = cursor.fetchone()[0]
 
-    cursor.execute("SELECT COUNT(*) FROM user_progress WHERE is_completed = 1")
+    cursor.execute("SELECT COUNT(*) FROM user_progress WHERE is_completed = TRUE")
     completed_topics = cursor.fetchone()[0]
 
     conn.close()
@@ -37,11 +36,11 @@ def admin_dashboard():
         completed_topics=completed_topics
     )
 
+
 @admin_bp.route("/pending-requests", methods=["GET", "POST"])
 def pending_requests():
     if "user_id" not in session:
         return redirect(url_for("auth.login"))
-
     if session.get("role") != "admin":
         return redirect(url_for("user.user_dashboard"))
 
@@ -55,14 +54,14 @@ def pending_requests():
         if action == "approve":
             cursor.execute("""
                 UPDATE course_requests
-                SET status = 'approved', approved_at = GETDATE()
-                WHERE id = ?
+                SET status = 'approved', approved_at = NOW()
+                WHERE id = %s
             """, (request_id,))
         elif action == "reject":
             cursor.execute("""
                 UPDATE course_requests
                 SET status = 'rejected'
-                WHERE id = ?
+                WHERE id = %s
             """, (request_id,))
 
         conn.commit()
@@ -76,7 +75,6 @@ def pending_requests():
         ORDER BY cr.requested_at DESC
     """)
     requests_data = cursor.fetchall()
-
     conn.close()
 
     return render_template(
@@ -85,11 +83,11 @@ def pending_requests():
         requests_data=requests_data
     )
 
+
 @admin_bp.route("/submission-reviews")
 def submission_reviews():
     if "user_id" not in session:
         return redirect(url_for("auth.login"))
-
     if session.get("role") != "admin":
         return redirect(url_for("user.user_dashboard"))
 
@@ -112,11 +110,10 @@ def submission_reviews():
         JOIN users u ON up.user_id = u.id
         JOIN courses c ON up.course_id = c.id
         JOIN course_topics ct ON up.topic_id = ct.id
-        WHERE up.is_completed = 1
+        WHERE up.is_completed = TRUE
         ORDER BY up.completed_at DESC
     """)
     submissions = cursor.fetchall()
-
     conn.close()
 
     return render_template(

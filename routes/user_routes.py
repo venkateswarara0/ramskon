@@ -37,13 +37,13 @@ def get_next_unlocked_day(user_id, course_id):
     cursor.execute("""
         SELECT MAX(day_number) AS last_completed_day
         FROM user_progress
-        WHERE user_id = ? AND course_id = ? AND is_completed = 1
+        WHERE user_id = %s AND course_id = %s AND is_completed = TRUE
     """, (user_id, course_id))
     row = cursor.fetchone()
     conn.close()
 
-    if row and row.last_completed_day:
-        return row.last_completed_day + 1
+    if row and row[0]:
+        return row[0] + 1
     return 1
 
 
@@ -75,7 +75,6 @@ def generate_certificate_pdf(full_name, course_name, completed_at, badge_name):
 
     pdf.setFont("Helvetica", 15)
     pdf.drawCentredString(width / 2, height - 435, f"Badge Earned: {badge_name}")
-
     pdf.drawCentredString(width / 2, height - 470, f"Completion Date: {completed_at}")
 
     pdf.setFont("Helvetica-Bold", 14)
@@ -101,16 +100,14 @@ def user_dashboard():
     user_id = session["user_id"]
 
     cursor.execute("""
-        SELECT COUNT(*) AS total_approved
-        FROM course_requests
-        WHERE user_id = ? AND status = 'approved'
+        SELECT COUNT(*) FROM course_requests
+        WHERE user_id = %s AND status = 'approved'
     """, (user_id,))
     approved_count = cursor.fetchone()[0]
 
     cursor.execute("""
-        SELECT COUNT(*) AS completed_topics
-        FROM user_progress
-        WHERE user_id = ? AND is_completed = 1
+        SELECT COUNT(*) FROM user_progress
+        WHERE user_id = %s AND is_completed = TRUE
     """, (user_id,))
     completed_count = cursor.fetchone()[0]
 
@@ -118,31 +115,22 @@ def user_dashboard():
         SELECT COUNT(*)
         FROM course_topics ct
         JOIN course_requests cr ON ct.course_id = cr.course_id
-        WHERE cr.user_id = ? AND cr.status = 'approved'
+        WHERE cr.user_id = %s AND cr.status = 'approved'
     """, (user_id,))
     total_topics = cursor.fetchone()[0]
 
     cursor.execute("""
         SELECT current_streak, best_streak, discipline_score, missed_days
-        FROM users
-        WHERE id = ?
+        FROM users WHERE id = %s
     """, (user_id,))
     stats = cursor.fetchone()
 
-    current_streak = 0
-    best_streak = 0
-    discipline_score = 0
-    missed_days = 0
+    current_streak = stats[0] or 0 if stats else 0
+    best_streak = stats[1] or 0 if stats else 0
+    discipline_score = stats[2] or 0 if stats else 0
+    missed_days = stats[3] or 0 if stats else 0
 
-    if stats:
-        current_streak = stats.current_streak or 0
-        best_streak = stats.best_streak or 0
-        discipline_score = stats.discipline_score or 0
-        missed_days = stats.missed_days or 0
-
-    progress_percent = 0
-    if total_topics > 0:
-        progress_percent = int((completed_count / total_topics) * 100)
+    progress_percent = int((completed_count / total_topics) * 100) if total_topics > 0 else 0
 
     conn.close()
 
@@ -177,14 +165,14 @@ def user_courses():
 
         cursor.execute("""
             SELECT id FROM course_requests
-            WHERE user_id = ? AND course_id = ?
+            WHERE user_id = %s AND course_id = %s
         """, (user_id, course_id))
         existing_request = cursor.fetchone()
 
         if not existing_request:
             cursor.execute("""
                 INSERT INTO course_requests (user_id, course_id, status)
-                VALUES (?, ?, 'pending')
+                VALUES (%s, %s, 'pending')
             """, (user_id, course_id))
             conn.commit()
 
@@ -195,7 +183,7 @@ def user_courses():
         SELECT cr.course_id, cr.status, c.course_name
         FROM course_requests cr
         JOIN courses c ON cr.course_id = c.id
-        WHERE cr.user_id = ?
+        WHERE cr.user_id = %s
     """, (session["user_id"],))
     my_requests = cursor.fetchall()
 
@@ -226,12 +214,12 @@ def approved_courses():
             c.course_name,
             c.description,
             c.duration_days,
-            ISNULL(cr.is_completed, 0) AS is_completed,
+            COALESCE(cr.is_completed, FALSE) AS is_completed,
             cr.badge_name,
             cr.completed_at
         FROM course_requests cr
         JOIN courses c ON cr.course_id = c.id
-        WHERE cr.user_id = ? AND cr.status = 'approved'
+        WHERE cr.user_id = %s AND cr.status = 'approved'
     """, (session["user_id"],))
     approved_courses = cursor.fetchall()
 
@@ -257,9 +245,8 @@ def course_roadmap(course_id):
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT id
-        FROM course_requests
-        WHERE user_id = ? AND course_id = ? AND status = 'approved'
+        SELECT id FROM course_requests
+        WHERE user_id = %s AND course_id = %s AND status = 'approved'
     """, (user_id, course_id))
     approved = cursor.fetchone()
 
@@ -267,11 +254,7 @@ def course_roadmap(course_id):
         conn.close()
         return "You are not approved for this course."
 
-    cursor.execute("""
-        SELECT course_name
-        FROM courses
-        WHERE id = ?
-    """, (course_id,))
+    cursor.execute("SELECT course_name FROM courses WHERE id = %s", (course_id,))
     course = cursor.fetchone()
 
     if not course:
@@ -283,24 +266,24 @@ def course_roadmap(course_id):
             ct.id,
             ct.day_number,
             ct.topic_title,
-            ISNULL(up.is_completed, 0) AS is_completed
+            COALESCE(up.is_completed, FALSE) AS is_completed
         FROM course_topics ct
         LEFT JOIN user_progress up
             ON ct.id = up.topic_id
-            AND up.user_id = ?
-            AND up.course_id = ?
-        WHERE ct.course_id = ?
+            AND up.user_id = %s
+            AND up.course_id = %s
+        WHERE ct.course_id = %s
         ORDER BY ct.day_number
     """, (user_id, course_id, course_id))
     topics = cursor.fetchall()
 
     if not topics:
         conn.close()
-        return "This course roadmap is not added yet. Please add course topics first."
+        return "This course roadmap is not added yet."
 
     next_unlocked_day = get_next_unlocked_day(user_id, course_id)
     total_days = len(topics)
-    completed_days = sum(1 for t in topics if t.is_completed)
+    completed_days = sum(1 for t in topics if t[3])
     progress_percent = int((completed_days / total_days) * 100) if total_days > 0 else 0
 
     conn.close()
@@ -308,7 +291,7 @@ def course_roadmap(course_id):
     return render_template(
         "user/course_roadmap.html",
         name=session.get("full_name"),
-        course_name=course.course_name,
+        course_name=course[0],
         course_id=course_id,
         topics=topics,
         next_unlocked_day=next_unlocked_day,
@@ -337,7 +320,7 @@ def daily_topic(course_id, day_number):
 
     cursor.execute("""
         SELECT id FROM course_requests
-        WHERE user_id = ? AND course_id = ? AND status = 'approved'
+        WHERE user_id = %s AND course_id = %s AND status = 'approved'
     """, (user_id, course_id))
     approved = cursor.fetchone()
 
@@ -351,7 +334,7 @@ def daily_topic(course_id, day_number):
                c.course_name
         FROM course_topics ct
         JOIN courses c ON ct.course_id = c.id
-        WHERE ct.course_id = ? AND ct.day_number = ?
+        WHERE ct.course_id = %s AND ct.day_number = %s
     """, (course_id, day_number))
     topic = cursor.fetchone()
 
@@ -360,12 +343,12 @@ def daily_topic(course_id, day_number):
         return "Topic not found for this day."
 
     topic_ai = explain_topic(
-        course_name=topic.course_name,
+        course_name=topic[5],
         day_number=day_number,
-        topic_title=topic.topic_title,
-        topic_description=topic.topic_description or "",
-        assignment_title=topic.assignment_title or "",
-        assignment_description=topic.assignment_description or ""
+        topic_title=topic[1],
+        topic_description=topic[2] or "",
+        assignment_title=topic[3] or "",
+        assignment_description=topic[4] or ""
     )
 
     youtube_videos = []
@@ -373,9 +356,9 @@ def daily_topic(course_id, day_number):
 
     if not queries:
         queries = [
-            f"{topic.topic_title} Telugu tutorial",
-            f"{topic.course_name} {topic.topic_title} Telugu",
-            f"{topic.topic_title} for beginners Telugu"
+            f"{topic[1]} Telugu tutorial",
+            f"{topic[5]} {topic[1]} Telugu",
+            f"{topic[1]} for beginners Telugu"
         ]
 
     for query in queries:
@@ -387,12 +370,10 @@ def daily_topic(course_id, day_number):
 
     unique_videos = []
     seen_links = set()
-
     for video in youtube_videos:
         if video["youtube_link"] not in seen_links:
             seen_links.add(video["youtube_link"])
             unique_videos.append(video)
-
     youtube_videos = unique_videos[:6]
 
     if request.method == "POST":
@@ -403,7 +384,7 @@ def daily_topic(course_id, day_number):
         if file and file.filename:
             if not allowed_file(file.filename):
                 conn.close()
-                return "Invalid file type. Allowed: png, jpg, jpeg, pdf, txt, zip, doc, docx, mp4"
+                return "Invalid file type."
 
             original_name = secure_filename(file.filename)
             unique_name = f"{uuid4().hex}_{original_name}"
@@ -412,11 +393,11 @@ def daily_topic(course_id, day_number):
             saved_filename = unique_name
 
         ai_result = rate_submission(
-            course_name=topic.course_name,
+            course_name=topic[5],
             day_number=day_number,
-            topic_title=topic.topic_title,
-            assignment_title=topic.assignment_title or "",
-            assignment_description=topic.assignment_description or "",
+            topic_title=topic[1],
+            assignment_title=topic[3] or "",
+            assignment_description=topic[4] or "",
             submission_text=submission_text,
             submission_file=saved_filename or ""
         )
@@ -432,8 +413,8 @@ def daily_topic(course_id, day_number):
 
         cursor.execute("""
             SELECT id, submission_file FROM user_progress
-            WHERE user_id = ? AND course_id = ? AND topic_id = ?
-        """, (user_id, course_id, topic.id))
+            WHERE user_id = %s AND course_id = %s AND topic_id = %s
+        """, (user_id, course_id, topic[0]))
         existing = cursor.fetchone()
 
         if not existing:
@@ -441,42 +422,35 @@ def daily_topic(course_id, day_number):
                 INSERT INTO user_progress
                 (user_id, course_id, topic_id, day_number, is_completed, completed_at,
                  submission_text, submission_file, ai_score, ai_feedback, ai_evaluated_at)
-                VALUES (?, ?, ?, ?, 1, GETDATE(), ?, ?, ?, ?, GETDATE())
-            """, (
-                user_id, course_id, topic.id, day_number,
-                submission_text, saved_filename, ai_score, ai_feedback
-            ))
+                VALUES (%s, %s, %s, %s, TRUE, NOW(), %s, %s, %s, %s, NOW())
+            """, (user_id, course_id, topic[0], day_number,
+                  submission_text, saved_filename, ai_score, ai_feedback))
         else:
-            old_file = existing.submission_file
-            final_file = saved_filename if saved_filename else old_file
-
+            final_file = saved_filename if saved_filename else existing[1]
             cursor.execute("""
                 UPDATE user_progress
-                SET is_completed = 1,
-                    completed_at = GETDATE(),
-                    submission_text = ?,
-                    submission_file = ?,
-                    ai_score = ?,
-                    ai_feedback = ?,
-                    ai_evaluated_at = GETDATE()
-                WHERE id = ?
-            """, (
-                submission_text, final_file, ai_score, ai_feedback, existing.id
-            ))
+                SET is_completed = TRUE,
+                    completed_at = NOW(),
+                    submission_text = %s,
+                    submission_file = %s,
+                    ai_score = %s,
+                    ai_feedback = %s,
+                    ai_evaluated_at = NOW()
+                WHERE id = %s
+            """, (submission_text, final_file, ai_score, ai_feedback, existing[0]))
 
         cursor.execute("""
-            SELECT current_streak, best_streak, discipline_score, last_completed_date, missed_days
-            FROM users
-            WHERE id = ?
+            SELECT current_streak, best_streak, discipline_score,
+                   last_completed_date, missed_days
+            FROM users WHERE id = %s
         """, (user_id,))
         user_stats = cursor.fetchone()
 
-        current_streak = user_stats.current_streak or 0
-        best_streak = user_stats.best_streak or 0
-        discipline_score = user_stats.discipline_score or 0
-        last_date = user_stats.last_completed_date
-        missed_days = user_stats.missed_days or 0
-
+        current_streak = user_stats[0] or 0
+        best_streak = user_stats[1] or 0
+        discipline_score = user_stats[2] or 0
+        last_date = user_stats[3]
+        missed_days = user_stats[4] or 0
         today = date.today()
 
         if last_date:
@@ -497,26 +471,19 @@ def daily_topic(course_id, day_number):
             discipline_score += 2
 
         cursor.execute("""
-            UPDATE users
-            SET current_streak = ?,
-                best_streak = ?,
-                discipline_score = ?,
-                last_completed_date = ?,
-                missed_days = ?
-            WHERE id = ?
+            UPDATE users SET current_streak = %s, best_streak = %s,
+            discipline_score = %s, last_completed_date = %s, missed_days = %s
+            WHERE id = %s
         """, (current_streak, best_streak, discipline_score, today, missed_days, user_id))
 
         cursor.execute("""
-            SELECT COUNT(*)
-            FROM course_topics
-            WHERE course_id = ?
+            SELECT COUNT(*) FROM course_topics WHERE course_id = %s
         """, (course_id,))
         total_course_days = cursor.fetchone()[0]
 
         cursor.execute("""
-            SELECT COUNT(*)
-            FROM user_progress
-            WHERE user_id = ? AND course_id = ? AND is_completed = 1
+            SELECT COUNT(*) FROM user_progress
+            WHERE user_id = %s AND course_id = %s AND is_completed = TRUE
         """, (user_id, course_id))
         completed_course_days = cursor.fetchone()[0]
 
@@ -529,10 +496,8 @@ def daily_topic(course_id, day_number):
 
             cursor.execute("""
                 UPDATE course_requests
-                SET is_completed = 1,
-                    completed_at = GETDATE(),
-                    badge_name = ?
-                WHERE user_id = ? AND course_id = ? AND status = 'approved'
+                SET is_completed = TRUE, completed_at = NOW(), badge_name = %s
+                WHERE user_id = %s AND course_id = %s AND status = 'approved'
             """, (badge_name, user_id, course_id))
 
         conn.commit()
@@ -540,23 +505,16 @@ def daily_topic(course_id, day_number):
     cursor.execute("""
         SELECT is_completed, submission_text, submission_file, ai_score, ai_feedback
         FROM user_progress
-        WHERE user_id = ? AND course_id = ? AND topic_id = ?
-    """, (user_id, course_id, topic.id))
+        WHERE user_id = %s AND course_id = %s AND topic_id = %s
+    """, (user_id, course_id, topic[0]))
     progress = cursor.fetchone()
     conn.close()
 
-    is_completed = False
-    submission_text = ""
-    submission_file = ""
-    ai_score = None
-    ai_feedback = ""
-
-    if progress:
-        is_completed = bool(progress.is_completed)
-        submission_text = progress.submission_text or ""
-        submission_file = progress.submission_file or ""
-        ai_score = progress.ai_score
-        ai_feedback = progress.ai_feedback or ""
+    is_completed = bool(progress[0]) if progress else False
+    submission_text = progress[1] or "" if progress else ""
+    submission_file = progress[2] or "" if progress else ""
+    ai_score = progress[3] if progress else None
+    ai_feedback = progress[4] or "" if progress else ""
 
     return render_template(
         "user/daily_topic.html",
@@ -590,9 +548,8 @@ def certificate(course_id):
         FROM course_requests cr
         JOIN users u ON cr.user_id = u.id
         JOIN courses c ON cr.course_id = c.id
-        WHERE cr.user_id = ? AND cr.course_id = ? AND cr.is_completed = 1
+        WHERE cr.user_id = %s AND cr.course_id = %s AND cr.is_completed = TRUE
     """, (session["user_id"], course_id))
-
     cert = cursor.fetchone()
     conn.close()
 
@@ -618,9 +575,8 @@ def download_certificate(course_id):
         FROM course_requests cr
         JOIN users u ON cr.user_id = u.id
         JOIN courses c ON cr.course_id = c.id
-        WHERE cr.user_id = ? AND cr.course_id = ? AND cr.is_completed = 1
+        WHERE cr.user_id = %s AND cr.course_id = %s AND cr.is_completed = TRUE
     """, (session["user_id"], course_id))
-
     cert = cursor.fetchone()
     conn.close()
 
@@ -628,13 +584,13 @@ def download_certificate(course_id):
         return "Certificate not available yet."
 
     pdf_buffer = generate_certificate_pdf(
-        full_name=cert.full_name,
-        course_name=cert.course_name,
-        completed_at=str(cert.completed_at),
-        badge_name=cert.badge_name or "Course Finisher"
+        full_name=cert[0],
+        course_name=cert[1],
+        completed_at=str(cert[2]),
+        badge_name=cert[3] or "Course Finisher"
     )
 
-    safe_course_name = cert.course_name.replace(" ", "_")
+    safe_course_name = cert[1].replace(" ", "_")
 
     return send_file(
         pdf_buffer,
@@ -662,7 +618,7 @@ def progress():
         FROM user_progress up
         JOIN courses c ON up.course_id = c.id
         JOIN course_topics ct ON up.topic_id = ct.id
-        WHERE up.user_id = ?
+        WHERE up.user_id = %s
         ORDER BY c.course_name, up.day_number
     """, (session["user_id"],))
     progress_data = cursor.fetchall()
