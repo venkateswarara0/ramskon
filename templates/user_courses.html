@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Available Courses</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #0f172a;
+            color: white;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 30px auto;
+            padding: 20px;
+        }
+
+        h1, h2 {
+            margin-bottom: 10px;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .course-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .course-card {
+            background: #1e293b;
+            border-radius: 14px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+        }
+
+        .course-card h3 {
+            margin-top: 0;
+            color: #38bdf8;
+        }
+
+        .course-card p {
+            margin: 8px 0;
+            color: #e2e8f0;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            text-decoration: none;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .btn-primary {
+            background: #22c55e;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #475569;
+            color: white;
+        }
+
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .actions {
+            margin-top: 30px;
+        }
+
+        .actions a {
+            margin-right: 12px;
+        }
+
+        .status {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        .pending {
+            color: #facc15;
+        }
+
+        .approved {
+            color: #4ade80;
+        }
+
+        .rejected {
+            color: #f87171;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="top-bar">
+            <div>
+                <h1>Available Courses</h1>
+                <p>Welcome, {{ user_name }}</p>
+            </div>
+        </div>
+
+        <h2>All Courses</h2>
+
+        {% if courses %}
+            <div class="course-grid">
+                {% for course in courses %}
+                    <div class="course-card">
+                        <h3>{{ course[3] }}</h3>
+                        <p>{{ course[4] }}</p>
+                        <p><strong>Duration:</strong> {{ course[1] }} days</p>
+                        <p><strong>Category:</strong> {{ course[5] }}</p>
+
+                        {% if course[0] in requested_courses %}
+                            {% if requested_courses[course[0]] == 'pending' %}
+                                <div class="status pending">Request Pending</div>
+                            {% elif requested_courses[course[0]] == 'approved' %}
+                                <div class="status approved">Approved</div>
+                            {% elif requested_courses[course[0]] == 'rejected' %}
+                                <div class="status rejected">Rejected</div>
+                            {% endif %}
+                        {% else %}
+                            <form method="POST" action="{{ url_for('user.request_course') }}">
+                                <input type="hidden" name="course_id" value="{{ course[0] }}">
+                                <button type="submit" class="btn btn-primary">Request Course</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p>No courses available.</p>
+        {% endif %}
+
+        <div class="actions">
+            <a href="{{ url_for('user.user_dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+            <a href="{{ url_for('auth.logout') }}" class="btn btn-warning">Logout</a>
+        </div>
+    </div>
+</body>
+</html>

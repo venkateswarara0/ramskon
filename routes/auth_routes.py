@@ -14,6 +14,7 @@ def register():
         full_name = request.form["full_name"]
         email = request.form["email"]
         password = request.form["password"]
+
         password_hash = generate_password_hash(password)
 
         conn = get_connection()
@@ -28,11 +29,12 @@ def register():
 
         cursor.execute("""
             INSERT INTO users (full_name, email, password_hash, role, is_approved)
-            VALUES (%s, %s, %s, 'user', FALSE)
-        """, (full_name, email, password_hash))
+            VALUES (%s, %s, %s, %s, %s)
+        """, (full_name, email, password_hash, "user", False))
 
         conn.commit()
         conn.close()
+
         return redirect(url_for("auth.login"))
 
     return render_template("register.html")
